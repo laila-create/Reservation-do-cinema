@@ -43,7 +43,7 @@ router.post("/", (req, res) => {
     res.status(201).json(nouvelle);
 });
 
-// GET /seances/:id  ->  one seance + the field placesRestantes
+// GET /seances/:id 
 router.get("/:id", (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {

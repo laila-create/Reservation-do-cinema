@@ -1,32 +1,32 @@
 import { Router } from "express";
-import { seances } from "./seances.js"; // films need the seances (for /films/:id/seances and for DELETE)
+import { seances } from "./seances.js";
 
 const router = Router();
 
-// The films data lives here, in the films file. "export" lets the other files use it.
+
 export const films = [
 { id: 1, titre: "Les Ailes du désir", duree: 128, genre: "drame" },
 { id: 2, titre: "Coco", duree: 105, genre: "animation" },
 { id: 3, titre: "Inception", duree: 148, genre: "science-fiction" }
 ];
 
-// GET /films  (also ?genre=animation and/or ?tri=duree)
+// GET /films  
 router.get("/", (req, res) => {
     const { genre, tri } = req.query;
-    let resultat = [...films];   // [...films] makes a copy, so sort() will not change the original list
+    let resultat = [...films];   // 
 
     if (genre) {
-        resultat = resultat.filter(f => f.genre === genre);   // keep only this genre
+        resultat = resultat.filter(f => f.genre === genre);   
     }
     if (tri === "duree") {
-        resultat.sort((a, b) => a.duree - b.duree);           // shortest to longest
+        resultat.sort((a, b) => a.duree - b.duree);          
     }
     res.status(200).json(resultat);
 });
 
 // GET /films/:id  ->  one film
 router.get("/:id", (req, res) => {
-    const id = Number(req.params.id);                        // "abc" becomes NaN
+    const id = Number(req.params.id);                       
     if (!Number.isInteger(id) || id <= 0) {                  // id must be a positive integer -> 400
         return res.status(400).json({ erreur: "Id invalide" });
     }
@@ -52,16 +52,16 @@ router.get("/:id/seances", (req, res) => {
 router.post("/", (req, res) => {
     const { titre, genre, duree } = req.body;
 
-    // 1) check the body -> 400
+    // check the body -> 400
     if (!titre || !genre || typeof duree !== "number" || duree <= 0) {
         return res.status(400).json({ erreur: "titre, genre et duree (> 0) sont obligatoires" });
     }
-    // 2) business rule: same title already exists -> 409
+    // business rule: same title already exists -> 409
     const existe = films.find(f => f.titre === titre);
     if (existe) {
         return res.status(409).json({ erreur: "Un film avec ce titre existe déjà" });
     }
-    // 3) next id = id of the last film + 1 (or 1 if the list is empty)
+    // next id = id of the last film + 1 (or 1 if the list is empty)
     let nouvelId = 1;
     if (films.length > 0) nouvelId = films[films.length - 1].id + 1;
 
@@ -70,7 +70,7 @@ router.post("/", (req, res) => {
     res.status(201).json(nouveau);
 });
 
-// DELETE /films/:id  ->  delete a film
+// delete a film
 router.delete("/:id", (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
