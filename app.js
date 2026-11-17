@@ -16,4 +16,4 @@ app.use((req, res) => {
     res.status(404).json({ erreur: "Route inconnue" });
 });
 
-app.listen(3000, () => console.log("Serveur sur http://localhost:3000"));
+app.listen(3000, () => console.log("Serveur sur http://localhost:7000"));
