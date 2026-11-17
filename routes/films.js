@@ -1,71 +1,66 @@
 import { Router } from "express";
-import { seances } from "./seances.js";
+import { films, seances, prochainId, idValide } from "../data.js";
 
 const router = Router();
 
-
-export const films = [
-{ id: 1, titre: "Les Ailes du désir", duree: 128, genre: "drame" },
-{ id: 2, titre: "Coco", duree: 105, genre: "animation" },
-{ id: 3, titre: "Inception", duree: 148, genre: "science-fiction" }
-];
-
-// GET /films  
+// GET /films   (also ?genre=animation and/or ?tri=duree)
 router.get("/", (req, res) => {
-    const { genre, tri } = req.query;
-    let resultat = [...films];   // 
+    const { genre, tri } = req.query;   // the values after the "?" in the URL
+    let resultat = films.slice();       // slice() makes a COPY of the list
 
     if (genre) {
-        resultat = resultat.filter(f => f.genre === genre);   
+        resultat = resultat.filter(f => f.genre === genre); 
+        // keep only the films of this genre
     }
     if (tri === "duree") {
-        resultat.sort((a, b) => a.duree - b.duree);          
+        resultat.sort((a, b) => a.duree - b.duree); 
+        // shortest first (a smaller duree goes first)
     }
     res.status(200).json(resultat);
 });
 
-// GET /films/:id  ->  one film
+// GET /films/:id   ->  one film
 router.get("/:id", (req, res) => {
-    const id = Number(req.params.id);                       
-    if (!Number.isInteger(id) || id <= 0) {                  // id must be a positive integer -> 400
+    const id = Number(req.params.id);
+    if (!idValide(id)) {                                     
         return res.status(400).json({ erreur: "Id invalide" });
     }
     const film = films.find(f => f.id === id);
-    if (!film) return res.status(404).json({ erreur: "Film not found" });
+    if (!film) {                                               
+        return res.status(404).json({ erreur: "Film introuvable" });
+    }
     res.status(200).json(film);
 });
 
-// GET /films/:id/seances  ->  the seances of one film
+// GET /films => the seances of one film
 router.get("/:id/seances", (req, res) => {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!idValide(id)) {
         return res.status(400).json({ erreur: "Id invalide" });
     }
     const film = films.find(f => f.id === id);
-    if (!film) return res.status(404).json({ erreur: "Film not found" });
-
-    const seancesDuFilm = seances.filter(s => s.filmId === film.id);
+    if (!film) {
+        return res.status(404).json({ erreur: "Film introuvable" });
+    }
+    const seancesDuFilm = seances.filter(s => s.filmId === id);
     res.status(200).json(seancesDuFilm);
 });
 
-// POST /films  ->  create a film
+//create a film
 router.post("/", (req, res) => {
     const { titre, genre, duree } = req.body;
 
-    // check the body -> 400
+    // typeof duree gives the type of the value: we want a number, and bigger than 0
     if (!titre || !genre || typeof duree !== "number" || duree <= 0) {
         return res.status(400).json({ erreur: "titre, genre et duree (> 0) sont obligatoires" });
     }
-    // business rule: same title already exists -> 409
+    // 
     const existe = films.find(f => f.titre === titre);
     if (existe) {
         return res.status(409).json({ erreur: "Un film avec ce titre existe déjà" });
     }
-    // next id = id of the last film + 1 (or 1 if the list is empty)
-    let nouvelId = 1;
-    if (films.length > 0) nouvelId = films[films.length - 1].id + 1;
-
-    const nouveau = { id: nouvelId, titre, duree, genre };
+    //  everything is fine: create the film
+    const nouveau = { id: prochainId(films), titre, duree, genre };
     films.push(nouveau);
     res.status(201).json(nouveau);
 });
@@ -73,19 +68,21 @@ router.post("/", (req, res) => {
 // delete a film
 router.delete("/:id", (req, res) => {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!idValide(id)) {
         return res.status(400).json({ erreur: "Id invalide" });
     }
-    const index = films.findIndex(f => f.id === id);
-    if (index === -1) return res.status(404).json({ erreur: "Film not found" });
-
+    // findIndex gives the POSITION of the film in the list
+    const position = films.findIndex(f => f.id === id);
+    if (position === -1) {
+        return res.status(404).json({ erreur: "Film introuvable" });
+    }
+    // forbidden if the film still has seances -> 409
     const aDesSeances = seances.find(s => s.filmId === id);
     if (aDesSeances) {
         return res.status(409).json({ erreur: "Ce film a encore des séances" });
     }
-
-    films.splice(index, 1);  
-    res.status(204).send();  
+    films.splice(position, 1);   // splice removes 1 item at this position
+    res.status(204).send();      // 204 = done, nothing to send back
 });
 
 export default router;
